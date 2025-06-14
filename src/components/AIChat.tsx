@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Send, Brain, User, BarChart3, Table, Lightbulb, Sparkles, Key, AlertCircle } from 'lucide-react';
+import { Send, Brain, User, BarChart3, Table, Lightbulb, Sparkles, Key, AlertCircle, Moon, Sun } from 'lucide-react';
 
 interface AIChatProps {
   data: any[];
@@ -20,13 +20,14 @@ interface Message {
 }
 
 export const AIChat: React.FC<AIChatProps> = ({ data, columns }) => {
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       type: 'ai',
       content: `Hello! I'm your AI data assistant powered by Gemini. I can help you analyze your data with ${data.length} rows and ${columns.length} columns. 
 
-First, please enter your Gemini API key to get started. You can get one from: https://aistudio.google.com/app/apikey
+Please enter your Gemini API key below to get started.
 
 Try asking me questions like:
 • "What are the top 5 values in [column]?"
@@ -249,7 +250,6 @@ Please provide a helpful analysis or answer based on the data context provided. 
       let aiResponse: string;
       
       if (apiKey) {
-        // Use Gemini API for enhanced responses
         aiResponse = await processQueryWithGemini(inputValue);
       } else {
         // Fallback to simple processing
@@ -289,44 +289,58 @@ Please provide a helpful analysis or answer based on the data context provided. 
     "Give me an overview of this data",
     "What columns do we have?",
     "Analyze patterns in my data",
-    columns.length > 0 ? `Show me unique values in ${columns[0].label}` : "What are the column types?"
+    columns.length > 0 ? `Show unique values in ${columns[0].label}` : "What are the column types?"
   ];
 
+  const themeClasses = isDarkMode 
+    ? 'bg-gray-900 text-white' 
+    : 'bg-white/70 backdrop-blur-sm text-gray-900';
+
   return (
-    <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg h-[600px] flex flex-col">
+    <Card className={`${themeClasses} border-0 shadow-lg h-[600px] flex flex-col transition-colors duration-200`}>
       <CardHeader className="flex-shrink-0">
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Brain className="h-5 w-5 text-purple-600" />
+            <Brain className={`h-5 w-5 ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`} />
             <span>AI Data Assistant</span>
-            <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+            <Badge variant="secondary" className={`${isDarkMode ? 'bg-purple-900 text-purple-200' : 'bg-purple-100 text-purple-800'}`}>
               <Sparkles className="h-3 w-3 mr-1" />
               Gemini
             </Badge>
           </div>
-          {!apiKey && (
-            <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-              <AlertCircle className="h-3 w-3 mr-1" />
-              API Key Required
-            </Badge>
-          )}
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className={isDarkMode ? 'border-gray-600 hover:bg-gray-800' : ''}
+            >
+              {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
+            {!apiKey && (
+              <Badge variant="outline" className={`${isDarkMode ? 'bg-orange-900 text-orange-200 border-orange-700' : 'bg-orange-50 text-orange-700 border-orange-200'}`}>
+                <AlertCircle className="h-3 w-3 mr-1" />
+                API Key Required
+              </Badge>
+            )}
+          </div>
         </CardTitle>
 
         {/* API Key Input */}
         <div className="space-y-2">
           <div className="flex items-center space-x-2">
-            <Key className="h-4 w-4 text-gray-500" />
-            <span className="text-sm font-medium">Gemini API Key</span>
+            <Key className={`h-4 w-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+            <span className="text-sm font-medium">Your Gemini API Key</span>
           </div>
           <Input
             type="password"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
-            placeholder="AIzaSyC1234567890abcdefghijklmnopqrstuvwxyz"
-            className="text-sm"
+            placeholder="Paste your Gemini API key here..."
+            className={`text-sm ${isDarkMode ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400' : ''}`}
           />
-          <p className="text-xs text-gray-500">
-            Get your API key from: <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Google AI Studio</a>
+          <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            Get your API key from: <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className={`${isDarkMode ? 'text-blue-400' : 'text-blue-600'} hover:underline`}>Google AI Studio</a>
           </p>
         </div>
       </CardHeader>
@@ -342,13 +356,17 @@ Please provide a helpful analysis or answer based on the data context provided. 
               <div
                 className={`max-w-[80%] p-3 rounded-lg ${
                   message.type === 'user'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-900'
+                    ? isDarkMode 
+                      ? 'bg-blue-700 text-white' 
+                      : 'bg-blue-600 text-white'
+                    : isDarkMode
+                      ? 'bg-gray-800 text-gray-100 border border-gray-700'
+                      : 'bg-gray-100 text-gray-900'
                 }`}
               >
                 <div className="flex items-start space-x-2">
                   {message.type === 'ai' && (
-                    <Brain className="h-4 w-4 mt-0.5 text-purple-600" />
+                    <Brain className={`h-4 w-4 mt-0.5 ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`} />
                   )}
                   {message.type === 'user' && (
                     <User className="h-4 w-4 mt-0.5" />
@@ -358,7 +376,9 @@ Please provide a helpful analysis or answer based on the data context provided. 
                       {message.content}
                     </div>
                     <div className={`text-xs mt-1 ${
-                      message.type === 'user' ? 'text-blue-200' : 'text-gray-500'
+                      message.type === 'user' 
+                        ? isDarkMode ? 'text-blue-300' : 'text-blue-200'
+                        : isDarkMode ? 'text-gray-400' : 'text-gray-500'
                     }`}>
                       {message.timestamp.toLocaleTimeString()}
                     </div>
@@ -370,10 +390,10 @@ Please provide a helpful analysis or answer based on the data context provided. 
           
           {isProcessing && (
             <div className="flex justify-start">
-              <div className="bg-gray-100 p-3 rounded-lg max-w-[80%]">
+              <div className={`p-3 rounded-lg max-w-[80%] ${isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-gray-100'}`}>
                 <div className="flex items-center space-x-2">
-                  <Brain className="h-4 w-4 text-purple-600 animate-pulse" />
-                  <div className="text-sm text-gray-600">
+                  <Brain className={`h-4 w-4 animate-pulse ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`} />
+                  <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                     {apiKey ? 'Analyzing with Gemini AI...' : 'Processing your data...'}
                   </div>
                 </div>
@@ -384,7 +404,7 @@ Please provide a helpful analysis or answer based on the data context provided. 
         </div>
 
         {/* Quick Questions */}
-        <div className="px-4 py-2 border-t">
+        <div className={`px-4 py-2 ${isDarkMode ? 'border-t border-gray-700' : 'border-t'}`}>
           <div className="flex flex-wrap gap-2 mb-3">
             {quickQuestions.map((question, index) => (
               <Button
@@ -392,7 +412,7 @@ Please provide a helpful analysis or answer based on the data context provided. 
                 variant="outline"
                 size="sm"
                 onClick={() => setInputValue(question)}
-                className="text-xs"
+                className={`text-xs ${isDarkMode ? 'border-gray-600 hover:bg-gray-800 text-gray-300' : ''}`}
               >
                 <Lightbulb className="h-3 w-3 mr-1" />
                 {question.length > 30 ? question.substring(0, 30) + '...' : question}
@@ -402,7 +422,7 @@ Please provide a helpful analysis or answer based on the data context provided. 
         </div>
 
         {/* Input */}
-        <div className="p-4 border-t bg-white/50">
+        <div className={`p-4 ${isDarkMode ? 'border-t border-gray-700 bg-gray-900/50' : 'border-t bg-white/50'}`}>
           <div className="flex space-x-2">
             <Input
               value={inputValue}
@@ -410,7 +430,7 @@ Please provide a helpful analysis or answer based on the data context provided. 
               onKeyPress={handleKeyPress}
               placeholder={apiKey ? "Ask about your data... (e.g., 'What's the average sales?')" : "Enter your Gemini API key above to start asking questions..."}
               disabled={isProcessing}
-              className="flex-1"
+              className={`flex-1 ${isDarkMode ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400' : ''}`}
             />
             <Button
               onClick={handleSendMessage}
