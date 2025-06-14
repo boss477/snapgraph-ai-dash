@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Send, Brain, User, BarChart3, Table, Lightbulb, Sparkles } from 'lucide-react';
+import { Send, Brain, User, BarChart3, Table, Lightbulb, Sparkles, Key, AlertCircle } from 'lucide-react';
 
 interface AIChatProps {
   data: any[];
@@ -24,18 +24,24 @@ export const AIChat: React.FC<AIChatProps> = ({ data, columns }) => {
     {
       id: '1',
       type: 'ai',
-      content: `Hello! I'm your AI data assistant. I can help you analyze your data with ${data.length} rows and ${columns.length} columns. Try asking me questions like:
+      content: `Hello! I'm your AI data assistant powered by Gemini. I can help you analyze your data with ${data.length} rows and ${columns.length} columns. 
 
+First, please enter your Gemini API key to get started. You can get one from: https://aistudio.google.com/app/apikey
+
+Try asking me questions like:
 • "What are the top 5 values in [column]?"
 • "Show me the average of [numeric column]"
 • "How many unique values are in [column]?"
 • "Find records where [column] is greater than [value]"
+• "Analyze trends in my data"
+• "Give me insights about this dataset"
 
 What would you like to explore?`,
       timestamp: new Date()
     }
   ]);
   const [inputValue, setInputValue] = useState('');
+  const [apiKey, setApiKey] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -47,7 +53,54 @@ What would you like to explore?`,
     scrollToBottom();
   }, [messages]);
 
-  // Simple query processing (in a real app, this would use a proper NLP service)
+  // Enhanced query processing with Gemini API
+  const processQueryWithGemini = async (query: string): Promise<string> => {
+    if (!apiKey) {
+      return "Please enter your Gemini API key first to use AI-powered analysis.";
+    }
+
+    try {
+      const dataContext = `
+Dataset Context:
+- Total rows: ${data.length}
+- Total columns: ${columns.length}
+- Column details: ${columns.map(col => `${col.label} (${col.type})`).join(', ')}
+- Sample data: ${JSON.stringify(data.slice(0, 3), null, 2)}
+      `;
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `You are a data scientist analyzing a dataset. Here's the context:
+
+${dataContext}
+
+User question: "${query}"
+
+Please provide a helpful analysis or answer based on the data context provided. If the user is asking for specific calculations, provide the actual calculations. If they want insights, provide meaningful observations about the data structure and potential patterns. Be concise but informative.`
+            }]
+          }]
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result.candidates?.[0]?.content?.parts?.[0]?.text || "I couldn't generate a response. Please try again.";
+    } catch (error) {
+      console.error('Gemini API error:', error);
+      return "Sorry, I encountered an error while processing your request. Please check your API key and try again.";
+    }
+  };
+
+  // Fallback to simple query processing
   const processQuery = (query: string): string => {
     const lowerQuery = query.toLowerCase();
     
@@ -192,18 +245,37 @@ What would you like to explore?`,
     setInputValue('');
     setIsProcessing(true);
 
-    // Simulate AI processing delay
-    setTimeout(() => {
-      const aiResponse: Message = {
+    try {
+      let aiResponse: string;
+      
+      if (apiKey) {
+        // Use Gemini API for enhanced responses
+        aiResponse = await processQueryWithGemini(inputValue);
+      } else {
+        // Fallback to simple processing
+        aiResponse = processQuery(inputValue);
+      }
+
+      const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'ai',
-        content: processQuery(inputValue),
+        content: aiResponse,
         timestamp: new Date()
       };
 
-      setMessages(prev => [...prev, aiResponse]);
+      setMessages(prev => [...prev, aiMessage]);
+    } catch (error) {
+      console.error('Error processing message:', error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'ai',
+        content: 'Sorry, I encountered an error processing your request. Please try again.',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsProcessing(false);
-    }, 1000);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -216,21 +288,47 @@ What would you like to explore?`,
   const quickQuestions = [
     "Give me an overview of this data",
     "What columns do we have?",
-    `How many rows are there?`,
+    "Analyze patterns in my data",
     columns.length > 0 ? `Show me unique values in ${columns[0].label}` : "What are the column types?"
   ];
 
   return (
     <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg h-[600px] flex flex-col">
       <CardHeader className="flex-shrink-0">
-        <CardTitle className="flex items-center space-x-2">
-          <Brain className="h-5 w-5 text-purple-600" />
-          <span>AI Data Assistant</span>
-          <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-            <Sparkles className="h-3 w-3 mr-1" />
-            Beta
-          </Badge>
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Brain className="h-5 w-5 text-purple-600" />
+            <span>AI Data Assistant</span>
+            <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+              <Sparkles className="h-3 w-3 mr-1" />
+              Gemini
+            </Badge>
+          </div>
+          {!apiKey && (
+            <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+              <AlertCircle className="h-3 w-3 mr-1" />
+              API Key Required
+            </Badge>
+          )}
         </CardTitle>
+
+        {/* API Key Input */}
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <Key className="h-4 w-4 text-gray-500" />
+            <span className="text-sm font-medium">Gemini API Key</span>
+          </div>
+          <Input
+            type="password"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder="AIzaSyC1234567890abcdefghijklmnopqrstuvwxyz"
+            className="text-sm"
+          />
+          <p className="text-xs text-gray-500">
+            Get your API key from: <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Google AI Studio</a>
+          </p>
+        </div>
       </CardHeader>
       
       <CardContent className="flex-1 flex flex-col p-0">
@@ -275,7 +373,9 @@ What would you like to explore?`,
               <div className="bg-gray-100 p-3 rounded-lg max-w-[80%]">
                 <div className="flex items-center space-x-2">
                   <Brain className="h-4 w-4 text-purple-600 animate-pulse" />
-                  <div className="text-sm text-gray-600">Analyzing your data...</div>
+                  <div className="text-sm text-gray-600">
+                    {apiKey ? 'Analyzing with Gemini AI...' : 'Processing your data...'}
+                  </div>
                 </div>
               </div>
             </div>
@@ -308,7 +408,7 @@ What would you like to explore?`,
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Ask about your data... (e.g., 'What's the average sales?')"
+              placeholder={apiKey ? "Ask about your data... (e.g., 'What's the average sales?')" : "Enter your Gemini API key above to start asking questions..."}
               disabled={isProcessing}
               className="flex-1"
             />
