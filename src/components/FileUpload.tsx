@@ -23,12 +23,18 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onDataUpload }) => {
     const sample = data.slice(0, sampleSize);
     
     return Object.keys(data[0]).map(key => {
-      const values = sample.map(row => row[key]).filter(val => val !== null && val !== '');
+      const values = sample.map(row => row[key]).filter(val => val !== null && val !== '' && val !== undefined);
       
       let type = 'text';
       if (values.length > 0) {
-        const numericValues = values.filter(val => !isNaN(Number(val)));
-        const dateValues = values.filter(val => !isNaN(Date.parse(val)));
+        const numericValues = values.filter(val => {
+          const num = Number(val);
+          return !isNaN(num) && isFinite(num);
+        });
+        const dateValues = values.filter(val => {
+          const date = new Date(val);
+          return !isNaN(date.getTime()) && val.toString().length > 4;
+        });
         
         if (numericValues.length / values.length > 0.8) {
           type = 'number';
@@ -50,50 +56,84 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onDataUpload }) => {
     setUploading(true);
     setUploadProgress(0);
     
-    console.log('Processing file:', file.name);
+    console.log('Processing file:', file.name, 'Size:', file.size, 'Type:', file.type);
     
     let processedRows = 0;
-    const totalSize = file.size;
+    let allData: any[] = [];
     
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
-      transformHeader: (header) => {
-        return header.trim();
+      delimiter: '', // Auto-detect delimiter
+      newline: '', // Auto-detect line endings
+      quoteChar: '"',
+      escapeChar: '"',
+      transformHeader: (header: string) => {
+        return header.trim().replace(/^\uFEFF/, ''); // Remove BOM if present
       },
-      step: (results) => {
-        processedRows++;
-        // Estimate progress based on processed rows
-        const estimatedProgress = Math.min((processedRows * 1000 / totalSize) * 100, 95);
-        setUploadProgress(estimatedProgress);
+      transform: (value: string) => {
+        return value.trim();
       },
-      complete: (results) => {
-        console.log('Parse complete:', results.data.length, 'rows');
-        
-        if (results.errors.length > 0) {
-          console.warn('Parse errors:', results.errors);
+      step: (results: Papa.ParseStepResult<any>) => {
+        if (results.data && Object.keys(results.data).length > 0) {
+          processedRows++;
+          allData.push(results.data);
+          // Update progress based on estimated file processing
+          const estimatedProgress = Math.min((processedRows / 100) * 90, 90);
+          setUploadProgress(estimatedProgress);
         }
         
-        if (results.data.length === 0) {
-          toast.error('No data found in the file');
+        if (results.errors && results.errors.length > 0) {
+          console.warn('Row parse errors:', results.errors);
+        }
+      },
+      complete: (results: Papa.ParseResult<any>) => {
+        console.log('Parse complete. Total rows found:', results.data.length);
+        console.log('Data sample:', results.data.slice(0, 3));
+        console.log('Meta info:', results.meta);
+        
+        if (results.errors && results.errors.length > 0) {
+          console.warn('Parse errors:', results.errors);
+          // Don't fail on minor errors, just warn
+          if (results.errors.some(error => error.type === 'Delimiter')) {
+            console.log('Delimiter detection may have failed, but continuing...');
+          }
+        }
+        
+        // Use step data if available, otherwise use complete data
+        const finalData = allData.length > 0 ? allData : results.data;
+        
+        // Filter out empty rows
+        const cleanData = finalData.filter(row => {
+          if (!row || typeof row !== 'object') return false;
+          const values = Object.values(row);
+          return values.some(value => value !== null && value !== undefined && value !== '');
+        });
+        
+        console.log('Clean data length:', cleanData.length);
+        
+        if (cleanData.length === 0) {
+          toast.error('No valid data found in the file. Please check the file format.');
           setUploading(false);
+          setUploadProgress(0);
           return;
         }
         
-        const columns = detectColumnTypes(results.data);
+        const columns = detectColumnTypes(cleanData);
         console.log('Detected columns:', columns);
         
         setUploadProgress(100);
         
         setTimeout(() => {
-          onDataUpload(results.data, columns, file.name);
+          onDataUpload(cleanData, columns, file.name);
           setUploading(false);
           setUploadProgress(0);
+          toast.success(`Successfully loaded ${cleanData.length} rows from ${file.name}`);
         }, 500);
       },
-      error: (error) => {
+      error: (error: Error) => {
         console.error('Parse error:', error);
-        toast.error('Failed to parse the file: ' + error.message);
+        toast.error(`Failed to parse the file: ${error.message}`);
         setUploading(false);
         setUploadProgress(0);
       }
@@ -103,20 +143,36 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onDataUpload }) => {
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (file) {
+      console.log('File dropped:', file.name, file.type, file.size);
       processFile(file);
     }
   }, [processFile]);
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, fileRejections } = useDropzone({
     onDrop,
     accept: {
       'text/csv': ['.csv'],
       'application/vnd.ms-excel': ['.xls'],
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'text/plain': ['.txt']
     },
     multiple: false,
     maxSize: 50 * 1024 * 1024 // 50MB
   });
+
+  // Handle file rejections
+  React.useEffect(() => {
+    if (fileRejections.length > 0) {
+      const rejection = fileRejections[0];
+      if (rejection.errors.some(e => e.code === 'file-too-large')) {
+        toast.error('File is too large. Maximum size is 50MB.');
+      } else if (rejection.errors.some(e => e.code === 'file-invalid-type')) {
+        toast.error('Invalid file type. Please upload a CSV, Excel, or text file.');
+      } else {
+        toast.error('File upload failed. Please try again.');
+      }
+    }
+  }, [fileRejections]);
 
   if (uploading) {
     return (
@@ -164,7 +220,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onDataUpload }) => {
           </Button>
           
           <div className="mt-6 text-sm text-gray-500">
-            <p>Supported formats: CSV, Excel (.xlsx, .xls)</p>
+            <p>Supported formats: CSV, Excel (.xlsx, .xls), Text (.txt)</p>
             <p>Maximum file size: 50MB</p>
           </div>
         </div>
@@ -179,6 +235,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onDataUpload }) => {
             <li>• Headers in the first row</li>
             <li>• Consistent data types in each column</li>
             <li>• No merged cells or complex formatting</li>
+            <li>• UTF-8 encoding (or common formats)</li>
           </ul>
         </div>
       </CardContent>
