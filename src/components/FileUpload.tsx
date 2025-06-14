@@ -1,4 +1,3 @@
-
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, FileText, AlertCircle, CheckCircle } from 'lucide-react';
@@ -65,7 +64,6 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onDataUpload }) => {
       header: true,
       skipEmptyLines: true,
       delimiter: '', // Auto-detect delimiter
-      newline: '', // Auto-detect line endings
       quoteChar: '"',
       escapeChar: '"',
       transformHeader: (header: string) => {
