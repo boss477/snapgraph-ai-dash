@@ -61,7 +61,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onDataUpload }) => {
     let processedRows = 0;
     let allData: any[] = [];
     
-    Papa.parse(file, {
+    Papa.parse<any>(file, {
       header: true,
       skipEmptyLines: true,
       delimiter: '', // Auto-detect delimiter
