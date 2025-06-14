@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -6,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Send, Brain, User, BarChart3, Table, Lightbulb, Sparkles, Key, AlertCircle, Moon, Sun } from 'lucide-react';
 
-// PASTE YOUR GEMINI API KEY HERE
-const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE";
+// Your Gemini API Key
+const GEMINI_API_KEY = "AIzaSyBaVbqz4lQoVba-PBNQC0mtnEvfBmZAHlI";
 
 interface AIChatProps {
   data: any[];
@@ -317,12 +316,10 @@ Please provide a helpful analysis or answer based on the data context provided. 
             >
               {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
-            {(!GEMINI_API_KEY || GEMINI_API_KEY === "YOUR_GEMINI_API_KEY_HERE") && (
-              <Badge variant="outline" className={`${isDarkMode ? 'bg-orange-900 text-orange-200 border-orange-700' : 'bg-orange-50 text-orange-700 border-orange-200'}`}>
-                <AlertCircle className="h-3 w-3 mr-1" />
-                API Key Required
-              </Badge>
-            )}
+            <Badge variant="outline" className={`${isDarkMode ? 'bg-green-900 text-green-200 border-green-700' : 'bg-green-50 text-green-700 border-green-200'}`}>
+              <Key className="h-3 w-3 mr-1" />
+              API Connected
+            </Badge>
           </div>
         </CardTitle>
 
@@ -331,16 +328,11 @@ Please provide a helpful analysis or answer based on the data context provided. 
           <div className="flex items-center space-x-2">
             <Key className={`h-4 w-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
             <span className="text-sm font-medium">
-              {GEMINI_API_KEY && GEMINI_API_KEY !== "YOUR_GEMINI_API_KEY_HERE" 
-                ? "✅ Gemini API Key Configured" 
-                : "❌ API Key Not Set"}
+              ✅ Gemini API Key Configured
             </span>
           </div>
           <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            {GEMINI_API_KEY && GEMINI_API_KEY !== "YOUR_GEMINI_API_KEY_HERE"
-              ? "AI-powered analysis is ready!"
-              : "Replace 'YOUR_GEMINI_API_KEY_HERE' in the code with your actual API key from Google AI Studio"
-            }
+            AI-powered analysis is ready!
           </p>
         </div>
       </CardHeader>
@@ -394,7 +386,7 @@ Please provide a helpful analysis or answer based on the data context provided. 
                 <div className="flex items-center space-x-2">
                   <Brain className={`h-4 w-4 animate-pulse ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`} />
                   <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                    {apiKey ? 'Analyzing with Gemini AI...' : 'Processing your data...'}
+                    Analyzing with Gemini AI...
                   </div>
                 </div>
               </div>
@@ -428,9 +420,7 @@ Please provide a helpful analysis or answer based on the data context provided. 
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder={GEMINI_API_KEY && GEMINI_API_KEY !== "YOUR_GEMINI_API_KEY_HERE" 
-                ? "Ask about your data... (e.g., 'What's the average sales?')" 
-                : "Add your Gemini API key in the code to start asking questions..."}
+              placeholder="Ask about your data... (e.g., 'What's the average sales?')"
               disabled={isProcessing}
               className={`flex-1 ${isDarkMode ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400' : ''}`}
             />
