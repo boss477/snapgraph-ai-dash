@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -17,7 +18,7 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns }) => 
   const [chartType, setChartType] = useState<'bar' | 'line' | 'pie' | 'scatter'>('bar');
   const [xAxis, setXAxis] = useState<string>('');
   const [yAxis, setYAxis] = useState<string>('');
-  const [groupBy, setGroupBy] = useState<string>('');
+  const [groupBy, setGroupBy] = useState<string>('none');
 
   const numericColumns = columns.filter(col => col.type === 'number');
   const categoricalColumns = columns.filter(col => col.type === 'text' || col.type === 'date');
@@ -48,7 +49,7 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns }) => 
       return Object.values(grouped).slice(0, 10); // Limit to top 10 for readability
     }
 
-    if (groupBy) {
+    if (groupBy && groupBy !== 'none') {
       // Group data by the groupBy field
       const grouped = processedData.reduce((acc, row) => {
         const key = String(row[xAxis] || 'Unknown');
@@ -106,7 +107,7 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns }) => 
               <YAxis />
               <Tooltip />
               <Legend />
-              {groupBy ? (
+              {groupBy && groupBy !== 'none' ? (
                 // Multiple bars for grouped data
                 [...new Set(data.map(d => String(d[groupBy] || 'Other')))].slice(0, 8).map((group, index) => (
                   <Bar key={group} dataKey={group} fill={COLORS[index % COLORS.length]} />
@@ -286,7 +287,7 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns }) => 
                 <SelectValue placeholder="Select field" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="none">None</SelectItem>
                 {categoricalColumns.map((column) => (
                   <SelectItem key={column.key} value={column.key}>
                     <div className="flex items-center space-x-2">
@@ -317,7 +318,7 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns }) => 
             <div className="flex items-center space-x-4">
               {xAxis && <Badge variant="outline">X: {columns.find(c => c.key === xAxis)?.label}</Badge>}
               {yAxis && <Badge variant="outline">Y: {columns.find(c => c.key === yAxis)?.label}</Badge>}
-              {groupBy && <Badge variant="outline">Group: {columns.find(c => c.key === groupBy)?.label}</Badge>}
+              {groupBy && groupBy !== 'none' && <Badge variant="outline">Group: {columns.find(c => c.key === groupBy)?.label}</Badge>}
             </div>
           </div>
         )}
