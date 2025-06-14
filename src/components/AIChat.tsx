@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Send, Brain, User, BarChart3, Table, Lightbulb, Sparkles, Key, AlertCircle, Moon, Sun } from 'lucide-react';
 
+// PASTE YOUR GEMINI API KEY HERE
+const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE";
+
 interface AIChatProps {
   data: any[];
   columns: any[];
@@ -27,8 +30,6 @@ export const AIChat: React.FC<AIChatProps> = ({ data, columns }) => {
       type: 'ai',
       content: `Hello! I'm your AI data assistant powered by Gemini. I can help you analyze your data with ${data.length} rows and ${columns.length} columns. 
 
-Please enter your Gemini API key below to get started.
-
 Try asking me questions like:
 • "What are the top 5 values in [column]?"
 • "Show me the average of [numeric column]"
@@ -42,7 +43,6 @@ What would you like to explore?`,
     }
   ]);
   const [inputValue, setInputValue] = useState('');
-  const [apiKey, setApiKey] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -56,8 +56,8 @@ What would you like to explore?`,
 
   // Enhanced query processing with Gemini API
   const processQueryWithGemini = async (query: string): Promise<string> => {
-    if (!apiKey) {
-      return "Please enter your Gemini API key first to use AI-powered analysis.";
+    if (!GEMINI_API_KEY || GEMINI_API_KEY === "YOUR_GEMINI_API_KEY_HERE") {
+      return "Please add your Gemini API key in the code to use AI-powered analysis.";
     }
 
     try {
@@ -69,7 +69,7 @@ Dataset Context:
 - Sample data: ${JSON.stringify(data.slice(0, 3), null, 2)}
       `;
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -249,7 +249,7 @@ Please provide a helpful analysis or answer based on the data context provided. 
     try {
       let aiResponse: string;
       
-      if (apiKey) {
+      if (GEMINI_API_KEY && GEMINI_API_KEY !== "YOUR_GEMINI_API_KEY_HERE") {
         aiResponse = await processQueryWithGemini(inputValue);
       } else {
         // Fallback to simple processing
@@ -317,7 +317,7 @@ Please provide a helpful analysis or answer based on the data context provided. 
             >
               {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
-            {!apiKey && (
+            {(!GEMINI_API_KEY || GEMINI_API_KEY === "YOUR_GEMINI_API_KEY_HERE") && (
               <Badge variant="outline" className={`${isDarkMode ? 'bg-orange-900 text-orange-200 border-orange-700' : 'bg-orange-50 text-orange-700 border-orange-200'}`}>
                 <AlertCircle className="h-3 w-3 mr-1" />
                 API Key Required
@@ -326,21 +326,21 @@ Please provide a helpful analysis or answer based on the data context provided. 
           </div>
         </CardTitle>
 
-        {/* API Key Input */}
+        {/* API Key Status */}
         <div className="space-y-2">
           <div className="flex items-center space-x-2">
             <Key className={`h-4 w-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-            <span className="text-sm font-medium">Your Gemini API Key</span>
+            <span className="text-sm font-medium">
+              {GEMINI_API_KEY && GEMINI_API_KEY !== "YOUR_GEMINI_API_KEY_HERE" 
+                ? "✅ Gemini API Key Configured" 
+                : "❌ API Key Not Set"}
+            </span>
           </div>
-          <Input
-            type="password"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder="Paste your Gemini API key here..."
-            className={`text-sm ${isDarkMode ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400' : ''}`}
-          />
           <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-            Get your API key from: <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className={`${isDarkMode ? 'text-blue-400' : 'text-blue-600'} hover:underline`}>Google AI Studio</a>
+            {GEMINI_API_KEY && GEMINI_API_KEY !== "YOUR_GEMINI_API_KEY_HERE"
+              ? "AI-powered analysis is ready!"
+              : "Replace 'YOUR_GEMINI_API_KEY_HERE' in the code with your actual API key from Google AI Studio"
+            }
           </p>
         </div>
       </CardHeader>
@@ -428,7 +428,9 @@ Please provide a helpful analysis or answer based on the data context provided. 
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder={apiKey ? "Ask about your data... (e.g., 'What's the average sales?')" : "Enter your Gemini API key above to start asking questions..."}
+              placeholder={GEMINI_API_KEY && GEMINI_API_KEY !== "YOUR_GEMINI_API_KEY_HERE" 
+                ? "Ask about your data... (e.g., 'What's the average sales?')" 
+                : "Add your Gemini API key in the code to start asking questions..."}
               disabled={isProcessing}
               className={`flex-1 ${isDarkMode ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400' : ''}`}
             />
