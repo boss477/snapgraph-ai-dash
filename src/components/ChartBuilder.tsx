@@ -1,0 +1,328 @@
+
+import React, { useState, useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, ScatterChart, Scatter } from 'recharts';
+import { BarChart3, PieChart as PieChartIcon, TrendingUp, Scatter as ScatterIcon, Download, RefreshCw } from 'lucide-react';
+
+interface ChartBuilderProps {
+  data: any[];
+  columns: any[];
+}
+
+const COLORS = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#6366F1', '#EC4899', '#14B8A6'];
+
+export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns }) => {
+  const [chartType, setChartType] = useState<'bar' | 'line' | 'pie' | 'scatter'>('bar');
+  const [xAxis, setXAxis] = useState<string>('');
+  const [yAxis, setYAxis] = useState<string>('');
+  const [groupBy, setGroupBy] = useState<string>('');
+
+  const numericColumns = columns.filter(col => col.type === 'number');
+  const categoricalColumns = columns.filter(col => col.type === 'text' || col.type === 'date');
+  const allColumns = columns;
+
+  const chartData = useMemo(() => {
+    if (!xAxis || (chartType !== 'pie' && !yAxis)) return [];
+
+    let processedData = [...data];
+
+    if (chartType === 'pie') {
+      // For pie charts, group by xAxis and sum up occurrences or values
+      const grouped = processedData.reduce((acc, row) => {
+        const key = String(row[xAxis] || 'Unknown');
+        if (!acc[key]) {
+          acc[key] = { name: key, value: 0, count: 0 };
+        }
+        
+        if (yAxis && !isNaN(Number(row[yAxis]))) {
+          acc[key].value += Number(row[yAxis]);
+        } else {
+          acc[key].value += 1;
+        }
+        acc[key].count += 1;
+        return acc;
+      }, {} as Record<string, any>);
+
+      return Object.values(grouped).slice(0, 10); // Limit to top 10 for readability
+    }
+
+    if (groupBy) {
+      // Group data by the groupBy field
+      const grouped = processedData.reduce((acc, row) => {
+        const key = String(row[xAxis] || 'Unknown');
+        const group = String(row[groupBy] || 'Other');
+        
+        if (!acc[key]) {
+          acc[key] = { [xAxis]: key };
+        }
+        
+        const value = yAxis && !isNaN(Number(row[yAxis])) ? Number(row[yAxis]) : 1;
+        acc[key][group] = (acc[key][group] || 0) + value;
+        
+        return acc;
+      }, {} as Record<string, any>);
+
+      return Object.values(grouped);
+    } else {
+      // Simple aggregation
+      const grouped = processedData.reduce((acc, row) => {
+        const key = String(row[xAxis] || 'Unknown');
+        if (!acc[key]) {
+          acc[key] = { [xAxis]: key, [yAxis]: 0, count: 0 };
+        }
+        
+        const value = yAxis && !isNaN(Number(row[yAxis])) ? Number(row[yAxis]) : 1;
+        acc[key][yAxis] += value;
+        acc[key].count += 1;
+        
+        return acc;
+      }, {} as Record<string, any>);
+
+      return Object.values(grouped);
+    }
+  }, [data, xAxis, yAxis, groupBy, chartType]);
+
+  const renderChart = () => {
+    if (chartData.length === 0) {
+      return (
+        <div className="h-64 flex items-center justify-center text-gray-500">
+          <div className="text-center">
+            <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
+            <p>Select fields to generate chart</p>
+          </div>
+        </div>
+      );
+    }
+
+    switch (chartType) {
+      case 'bar':
+        return (
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey={xAxis} />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              {groupBy ? (
+                // Multiple bars for grouped data
+                [...new Set(data.map(d => String(d[groupBy] || 'Other')))].slice(0, 8).map((group, index) => (
+                  <Bar key={group} dataKey={group} fill={COLORS[index % COLORS.length]} />
+                ))
+              ) : (
+                <Bar dataKey={yAxis} fill={COLORS[0]} />
+              )}
+            </BarChart>
+          </ResponsiveContainer>
+        );
+
+      case 'line':
+        return (
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey={xAxis} />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey={yAxis} stroke={COLORS[0]} strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        );
+
+      case 'pie':
+        return (
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={chartData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        );
+
+      case 'scatter':
+        return (
+          <ResponsiveContainer width="100%" height={300}>
+            <ScatterChart data={chartData}>
+              <CartesianGrid />
+              <XAxis dataKey={xAxis} />
+              <YAxis dataKey={yAxis} />
+              <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+              <Scatter fill={COLORS[0]} />
+            </ScatterChart>
+          </ResponsiveContainer>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  const chartTypeOptions = [
+    { value: 'bar', label: 'Bar Chart', icon: BarChart3 },
+    { value: 'line', label: 'Line Chart', icon: TrendingUp },
+    { value: 'pie', label: 'Pie Chart', icon: PieChartIcon },
+    { value: 'scatter', label: 'Scatter Plot', icon: ScatterIcon }
+  ];
+
+  return (
+    <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <span>Chart Builder</span>
+          <div className="flex items-center space-x-2">
+            <Button variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Reset
+            </Button>
+            <Button variant="outline" size="sm">
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+          </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Chart Type Selection */}
+        <div>
+          <label className="text-sm font-medium mb-2 block">Chart Type</label>
+          <div className="grid grid-cols-2 gap-2">
+            {chartTypeOptions.map((option) => {
+              const Icon = option.icon;
+              return (
+                <Button
+                  key={option.value}
+                  variant={chartType === option.value ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setChartType(option.value as any)}
+                  className="flex items-center space-x-2"
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{option.label}</span>
+                </Button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Field Selection */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="text-sm font-medium mb-2 block">
+              X-Axis {chartType === 'pie' ? '(Categories)' : ''}
+              <Badge variant="secondary" className="ml-2">Required</Badge>
+            </label>
+            <Select value={xAxis} onValueChange={setXAxis}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select field" />
+              </SelectTrigger>
+              <SelectContent>
+                {allColumns.map((column) => (
+                  <SelectItem key={column.key} value={column.key}>
+                    <div className="flex items-center space-x-2">
+                      <span>{column.label}</span>
+                      <Badge className={`text-xs ${
+                        column.type === 'number' ? 'bg-blue-100 text-blue-800' :
+                        column.type === 'date' ? 'bg-green-100 text-green-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {column.type}
+                      </Badge>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {chartType !== 'pie' && (
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Y-Axis (Values)
+                <Badge variant="secondary" className="ml-2">Required</Badge>
+              </label>
+              <Select value={yAxis} onValueChange={setYAxis}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select field" />
+                </SelectTrigger>
+                <SelectContent>
+                  {numericColumns.map((column) => (
+                    <SelectItem key={column.key} value={column.key}>
+                      <div className="flex items-center space-x-2">
+                        <span>{column.label}</span>
+                        <Badge className="text-xs bg-blue-100 text-blue-800">
+                          {column.type}
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <div>
+            <label className="text-sm font-medium mb-2 block">
+              Group By
+              <Badge variant="outline" className="ml-2">Optional</Badge>
+            </label>
+            <Select value={groupBy} onValueChange={setGroupBy}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select field" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">None</SelectItem>
+                {categoricalColumns.map((column) => (
+                  <SelectItem key={column.key} value={column.key}>
+                    <div className="flex items-center space-x-2">
+                      <span>{column.label}</span>
+                      <Badge className={`text-xs ${
+                        column.type === 'date' ? 'bg-green-100 text-green-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {column.type}
+                      </Badge>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Chart Display */}
+        <div className="border rounded-lg p-4 bg-white/50">
+          {renderChart()}
+        </div>
+
+        {/* Chart Info */}
+        {chartData.length > 0 && (
+          <div className="flex justify-between items-center text-sm text-gray-600">
+            <span>{chartData.length} data points</span>
+            <div className="flex items-center space-x-4">
+              {xAxis && <Badge variant="outline">X: {columns.find(c => c.key === xAxis)?.label}</Badge>}
+              {yAxis && <Badge variant="outline">Y: {columns.find(c => c.key === yAxis)?.label}</Badge>}
+              {groupBy && <Badge variant="outline">Group: {columns.find(c => c.key === groupBy)?.label}</Badge>}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};

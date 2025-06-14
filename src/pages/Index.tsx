@@ -1,11 +1,194 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import React, { useState, useRef } from 'react';
+import { Upload, BarChart3, MessageSquare, Download, Plus, Settings, Brain, Zap } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from 'sonner';
+import { FileUpload } from '@/components/FileUpload';
+import { DataTable } from '@/components/DataTable';
+import { ChartBuilder } from '@/components/ChartBuilder';
+import { PivotTable } from '@/components/PivotTable';
+import { Dashboard } from '@/components/Dashboard';
+import { AIChat } from '@/components/AIChat';
 
 const Index = () => {
+  const [data, setData] = useState([]);
+  const [columns, setColumns] = useState([]);
+  const [fileName, setFileName] = useState('');
+  const [activeTab, setActiveTab] = useState('upload');
+
+  const handleDataUpload = (parsedData, detectedColumns, name) => {
+    console.log('Data uploaded:', parsedData.length, 'rows');
+    setData(parsedData);
+    setColumns(detectedColumns);
+    setFileName(name);
+    setActiveTab('explore');
+    toast.success(`Successfully loaded ${parsedData.length} rows from ${name}`);
+  };
+
+  const hasData = data.length > 0;
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      {/* Header */}
+      <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-3">
+              <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-2 rounded-lg">
+                <BarChart3 className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  SnapGraph
+                </h1>
+                <p className="text-xs text-gray-500">AI-First Business Intelligence</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button variant="outline" size="sm">
+                <Settings className="h-4 w-4 mr-2" />
+                Settings
+              </Button>
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5 bg-white/70 backdrop-blur-sm">
+            <TabsTrigger value="upload" className="flex items-center space-x-2">
+              <Upload className="h-4 w-4" />
+              <span>Upload</span>
+            </TabsTrigger>
+            <TabsTrigger value="explore" disabled={!hasData} className="flex items-center space-x-2">
+              <BarChart3 className="h-4 w-4" />
+              <span>Explore</span>
+            </TabsTrigger>
+            <TabsTrigger value="pivot" disabled={!hasData} className="flex items-center space-x-2">
+              <Plus className="h-4 w-4" />
+              <span>Pivot</span>
+            </TabsTrigger>
+            <TabsTrigger value="dashboard" disabled={!hasData} className="flex items-center space-x-2">
+              <Zap className="h-4 w-4" />
+              <span>Dashboard</span>
+            </TabsTrigger>
+            <TabsTrigger value="ai-chat" disabled={!hasData} className="flex items-center space-x-2">
+              <Brain className="h-4 w-4" />
+              <span>AI Chat</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="upload" className="space-y-6">
+            <div className="text-center py-8">
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                Transform Your Data Into Insights
+              </h2>
+              <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+                Upload your CSV files and let SnapGraph's AI help you discover patterns, 
+                create interactive dashboards, and generate business insights in minutes.
+              </p>
+            </div>
+            <FileUpload onDataUpload={handleDataUpload} />
+            
+            {/* Feature Highlights */}
+            <div className="grid md:grid-cols-3 gap-6 mt-12">
+              <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Brain className="h-5 w-5 text-blue-600" />
+                    <span>AI-Powered Insights</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600">
+                    Ask questions in natural language and get instant answers from your data.
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <BarChart3 className="h-5 w-5 text-purple-600" />
+                    <span>Dynamic Visualizations</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600">
+                    Create interactive charts and pivot tables with simple drag & drop.
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-shadow">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Zap className="h-5 w-5 text-indigo-600" />
+                    <span>Real-time Dashboards</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-gray-600">
+                    Build beautiful dashboards that update automatically as your data changes.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="explore">
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Data Explorer</h2>
+                  <p className="text-gray-600">
+                    {fileName && `${fileName} • `}{data.length} rows • {columns.length} columns
+                  </p>
+                </div>
+              </div>
+              <div className="grid lg:grid-cols-2 gap-6">
+                <DataTable data={data} columns={columns} />
+                <ChartBuilder data={data} columns={columns} />
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="pivot">
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Pivot Table Builder</h2>
+                <p className="text-gray-600">
+                  Drag and drop fields to create dynamic pivot tables and cross-tabulations.
+                </p>
+              </div>
+              <PivotTable data={data} columns={columns} />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="dashboard">
+            <Dashboard data={data} columns={columns} />
+          </TabsContent>
+
+          <TabsContent value="ai-chat">
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">AI Data Assistant</h2>
+                <p className="text-gray-600">
+                  Ask questions about your data in natural language and get instant insights.
+                </p>
+              </div>
+              <AIChat data={data} columns={columns} />
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
