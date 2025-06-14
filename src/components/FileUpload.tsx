@@ -52,15 +52,20 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onDataUpload }) => {
     
     console.log('Processing file:', file.name);
     
+    let processedRows = 0;
+    const totalSize = file.size;
+    
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
       transformHeader: (header) => {
         return header.trim();
       },
-      step: (results, parser) => {
-        const progress = Math.min((parser.cursor / file.size) * 100, 95);
-        setUploadProgress(progress);
+      step: (results) => {
+        processedRows++;
+        // Estimate progress based on processed rows
+        const estimatedProgress = Math.min((processedRows * 1000 / totalSize) * 100, 95);
+        setUploadProgress(estimatedProgress);
       },
       complete: (results) => {
         console.log('Parse complete:', results.data.length, 'rows');
