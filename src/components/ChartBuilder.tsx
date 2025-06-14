@@ -1,11 +1,10 @@
-
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, ScatterChart, Scatter } from 'recharts';
-import { BarChart3, PieChart as PieChartIcon, TrendingUp, Scatter as ScatterIcon, Download, RefreshCw } from 'lucide-react';
+import { BarChart3, PieChart as PieChartIcon, TrendingUp, Activity, Download, RefreshCw } from 'lucide-react';
 
 interface ChartBuilderProps {
   data: any[];
@@ -178,7 +177,7 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns }) => 
     { value: 'bar', label: 'Bar Chart', icon: BarChart3 },
     { value: 'line', label: 'Line Chart', icon: TrendingUp },
     { value: 'pie', label: 'Pie Chart', icon: PieChartIcon },
-    { value: 'scatter', label: 'Scatter Plot', icon: ScatterIcon }
+    { value: 'scatter', label: 'Scatter Plot', icon: Activity }
   ];
 
   return (
