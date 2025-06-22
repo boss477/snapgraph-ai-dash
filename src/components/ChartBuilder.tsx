@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, ScatterChart, Scatter } from 'recharts';
 import { BarChart3, PieChart as PieChartIcon, TrendingUp, Activity, Download, RefreshCw } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface ChartBuilderProps {
   data: any[];
@@ -19,6 +20,7 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns }) => 
   const [xAxis, setXAxis] = useState<string>('');
   const [yAxis, setYAxis] = useState<string>('');
   const [groupBy, setGroupBy] = useState<string>('none');
+  const { isDarkMode } = useTheme();
 
   const numericColumns = columns.filter(col => col.type === 'number');
   const categoricalColumns = columns.filter(col => col.type === 'text' || col.type === 'date');
@@ -88,24 +90,48 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns }) => 
   const renderChart = () => {
     if (chartData.length === 0) {
       return (
-        <div className="h-64 flex items-center justify-center text-gray-500">
+        <div className="h-64 flex items-center justify-center">
           <div className="text-center">
-            <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
-            <p>Select fields to generate chart</p>
+            <BarChart3 className={`h-12 w-12 mx-auto mb-2 opacity-50 ${
+              isDarkMode ? 'text-gray-400' : 'text-gray-500'
+            }`} />
+            <p className={isDarkMode ? 'text-gray-400' : 'text-gray-500'}>
+              Select fields to generate chart
+            </p>
           </div>
         </div>
       );
     }
+
+    const chartTheme = {
+      grid: { stroke: isDarkMode ? '#374151' : '#e5e7eb' },
+      text: { fill: isDarkMode ? '#d1d5db' : '#374151' },
+      axis: { stroke: isDarkMode ? '#6b7280' : '#9ca3af' }
+    };
 
     switch (chartType) {
       case 'bar':
         return (
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey={xAxis} />
-              <YAxis />
-              <Tooltip />
+              <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid.stroke} />
+              <XAxis 
+                dataKey={xAxis} 
+                tick={{ fill: chartTheme.text.fill }}
+                axisLine={{ stroke: chartTheme.axis.stroke }}
+              />
+              <YAxis 
+                tick={{ fill: chartTheme.text.fill }}
+                axisLine={{ stroke: chartTheme.axis.stroke }}
+              />
+              <Tooltip 
+                contentStyle={{
+                  backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
+                  border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+                  borderRadius: '6px',
+                  color: isDarkMode ? '#f3f4f6' : '#111827'
+                }}
+              />
               <Legend />
               {groupBy && groupBy !== 'none' ? (
                 // Multiple bars for grouped data
@@ -123,10 +149,24 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns }) => 
         return (
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey={xAxis} />
-              <YAxis />
-              <Tooltip />
+              <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid.stroke} />
+              <XAxis 
+                dataKey={xAxis}
+                tick={{ fill: chartTheme.text.fill }}
+                axisLine={{ stroke: chartTheme.axis.stroke }}
+              />
+              <YAxis 
+                tick={{ fill: chartTheme.text.fill }}
+                axisLine={{ stroke: chartTheme.axis.stroke }}
+              />
+              <Tooltip 
+                contentStyle={{
+                  backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
+                  border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+                  borderRadius: '6px',
+                  color: isDarkMode ? '#f3f4f6' : '#111827'
+                }}
+              />
               <Legend />
               <Line type="monotone" dataKey={yAxis} stroke={COLORS[0]} strokeWidth={2} />
             </LineChart>
@@ -151,7 +191,14 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns }) => 
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip />
+              <Tooltip 
+                contentStyle={{
+                  backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
+                  border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+                  borderRadius: '6px',
+                  color: isDarkMode ? '#f3f4f6' : '#111827'
+                }}
+              />
             </PieChart>
           </ResponsiveContainer>
         );
@@ -160,10 +207,26 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns }) => 
         return (
           <ResponsiveContainer width="100%" height={300}>
             <ScatterChart data={chartData}>
-              <CartesianGrid />
-              <XAxis dataKey={xAxis} />
-              <YAxis dataKey={yAxis} />
-              <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+              <CartesianGrid stroke={chartTheme.grid.stroke} />
+              <XAxis 
+                dataKey={xAxis}
+                tick={{ fill: chartTheme.text.fill }}
+                axisLine={{ stroke: chartTheme.axis.stroke }}
+              />
+              <YAxis 
+                dataKey={yAxis}
+                tick={{ fill: chartTheme.text.fill }}
+                axisLine={{ stroke: chartTheme.axis.stroke }}
+              />
+              <Tooltip 
+                cursor={{ strokeDasharray: '3 3' }}
+                contentStyle={{
+                  backgroundColor: isDarkMode ? '#1f2937' : '#ffffff',
+                  border: `1px solid ${isDarkMode ? '#374151' : '#e5e7eb'}`,
+                  borderRadius: '6px',
+                  color: isDarkMode ? '#f3f4f6' : '#111827'
+                }}
+              />
               <Scatter fill={COLORS[0]} />
             </ScatterChart>
           </ResponsiveContainer>
@@ -182,9 +245,11 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns }) => 
   ];
 
   return (
-    <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+    <Card className={`backdrop-blur-sm border-0 shadow-lg transition-colors duration-300 ${
+      isDarkMode ? 'bg-gray-800/70 border-gray-700' : 'bg-white/70 border-gray-200'
+    }`}>
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+        <CardTitle className={`flex items-center justify-between ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
           <span>Chart Builder</span>
           <div className="flex items-center space-x-2">
             <Button variant="outline" size="sm">
@@ -201,7 +266,9 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns }) => 
       <CardContent className="space-y-4">
         {/* Chart Type Selection */}
         <div>
-          <label className="text-sm font-medium mb-2 block">Chart Type</label>
+          <label className={`text-sm font-medium mb-2 block ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            Chart Type
+          </label>
           <div className="grid grid-cols-2 gap-2">
             {chartTypeOptions.map((option) => {
               const Icon = option.icon;
@@ -224,7 +291,7 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns }) => 
         {/* Field Selection */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="text-sm font-medium mb-2 block">
+            <label className={`text-sm font-medium mb-2 block ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
               X-Axis {chartType === 'pie' ? '(Categories)' : ''}
               <Badge variant="secondary" className="ml-2">Required</Badge>
             </label>
@@ -253,7 +320,7 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns }) => 
 
           {chartType !== 'pie' && (
             <div>
-              <label className="text-sm font-medium mb-2 block">
+              <label className={`text-sm font-medium mb-2 block ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 Y-Axis (Values)
                 <Badge variant="secondary" className="ml-2">Required</Badge>
               </label>
@@ -278,7 +345,7 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns }) => 
           )}
 
           <div>
-            <label className="text-sm font-medium mb-2 block">
+            <label className={`text-sm font-medium mb-2 block ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
               Group By
               <Badge variant="outline" className="ml-2">Optional</Badge>
             </label>
@@ -307,13 +374,17 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns }) => 
         </div>
 
         {/* Chart Display */}
-        <div className="border rounded-lg p-4 bg-white/50">
+        <div className={`border rounded-lg p-4 transition-colors duration-300 ${
+          isDarkMode ? 'bg-gray-900/50 border-gray-600' : 'bg-white/50 border-gray-200'
+        }`}>
           {renderChart()}
         </div>
 
         {/* Chart Info */}
         {chartData.length > 0 && (
-          <div className="flex justify-between items-center text-sm text-gray-600">
+          <div className={`flex justify-between items-center text-sm ${
+            isDarkMode ? 'text-gray-400' : 'text-gray-600'
+          }`}>
             <span>{chartData.length} data points</span>
             <div className="flex items-center space-x-4">
               {xAxis && <Badge variant="outline">X: {columns.find(c => c.key === xAxis)?.label}</Badge>}
