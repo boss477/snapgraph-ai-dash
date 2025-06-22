@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, X, Download, RefreshCw, BarChart3 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
+import { toast } from 'sonner';
 
 interface PivotTableProps {
   data: any[];
@@ -125,6 +125,40 @@ export const PivotTable: React.FC<PivotTableProps> = ({ data, columns }) => {
     return { headers, rows };
   }, [data, config]);
 
+  const addToDashboard = () => {
+    if (config.values.length === 0) {
+      toast.error('Please add at least one value field to create a pivot table widget');
+      return;
+    }
+
+    const savedWidgets = localStorage.getItem('snapgraph-dashboard-widgets');
+    let widgets = [];
+    
+    try {
+      widgets = savedWidgets ? JSON.parse(savedWidgets) : [];
+    } catch (error) {
+      console.error('Error loading dashboard widgets:', error);
+    }
+
+    const newWidget = {
+      id: `widget-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type: 'pivot',
+      title: `Pivot Table - ${config.values.map(v => v.field).join(', ')}`,
+      config: {
+        rows: config.rows,
+        columns: config.columns,
+        values: config.values
+      },
+      size: 'large'
+    };
+
+    const updatedWidgets = [...widgets, newWidget];
+    localStorage.setItem('snapgraph-dashboard-widgets', JSON.stringify(updatedWidgets));
+    
+    toast.success('Pivot table added to dashboard successfully!');
+    console.log('Added pivot table to dashboard:', newWidget);
+  };
+
   const addField = (area: keyof PivotConfig, field: string) => {
     if (area === 'values') {
       const numericField = numericFields.find(f => f.key === field);
@@ -168,6 +202,12 @@ export const PivotTable: React.FC<PivotTableProps> = ({ data, columns }) => {
         <CardTitle className={`flex items-center justify-between ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
           <span>Pivot Table Builder</span>
           <div className="flex items-center space-x-2">
+            {config.values.length > 0 && (
+              <Button variant="outline" size="sm" onClick={addToDashboard}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add to Dashboard
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={resetPivot}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Reset

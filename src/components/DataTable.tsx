@@ -1,10 +1,10 @@
-
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Download, Filter } from 'lucide-react';
+import { Search, Download, Filter, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 
 interface DataTableProps {
   data: any[];
@@ -74,6 +74,40 @@ export const DataTable: React.FC<DataTableProps> = ({ data, columns }) => {
     }
   };
 
+  const addToDashboard = () => {
+    const savedWidgets = localStorage.getItem('snapgraph-dashboard-widgets');
+    let widgets = [];
+    
+    try {
+      widgets = savedWidgets ? JSON.parse(savedWidgets) : [];
+    } catch (error) {
+      console.error('Error loading dashboard widgets:', error);
+    }
+
+    const newWidget = {
+      id: `widget-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type: 'chart',
+      title: 'Data Table Chart',
+      config: {
+        chartType: 'bar',
+        xAxis: columns.find(col => col.type !== 'number')?.key || columns[0]?.key,
+        yAxis: columns.find(col => col.type === 'number')?.key || columns[1]?.key,
+        showLegend: true,
+        showGrid: true
+      },
+      size: 'medium'
+    };
+
+    const updatedWidgets = [...widgets, newWidget];
+    localStorage.setItem('snapgraph-dashboard-widgets', JSON.stringify(updatedWidgets));
+    
+    // Save chart config separately
+    localStorage.setItem(`chart-config-${newWidget.id}`, JSON.stringify(newWidget.config));
+    
+    toast.success('Chart added to dashboard successfully!');
+    console.log('Added chart to dashboard:', newWidget);
+  };
+
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'number': return 'bg-blue-100 text-blue-800';
@@ -116,6 +150,10 @@ export const DataTable: React.FC<DataTableProps> = ({ data, columns }) => {
                 className="pl-10 w-64"
               />
             </div>
+            <Button variant="outline" size="sm" onClick={addToDashboard}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add to Dashboard
+            </Button>
             <Button variant="outline" size="sm">
               <Download className="h-4 w-4 mr-2" />
               Export
