@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Settings, Download, Layout, BarChart3, PieChart, TrendingUp, Hash, Save, Trash2 } from 'lucide-react';
@@ -47,55 +47,76 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, columns }) => {
     };
   });
 
+  // Load dashboard layout on mount
+  useEffect(() => {
+    const savedWidgets = localStorage.getItem('snapgraph-dashboard-widgets');
+    if (savedWidgets) {
+      try {
+        const parsedWidgets = JSON.parse(savedWidgets);
+        setWidgets(parsedWidgets);
+        console.log('Loaded dashboard widgets:', parsedWidgets);
+      } catch (error) {
+        console.error('Error loading dashboard widgets:', error);
+      }
+    }
+  }, []);
+
+  // Auto-save widgets when they change
+  useEffect(() => {
+    if (widgets.length > 0) {
+      localStorage.setItem('snapgraph-dashboard-widgets', JSON.stringify(widgets));
+      console.log('Auto-saved dashboard widgets:', widgets);
+    }
+  }, [widgets]);
+
   const addWidget = (type: Widget['type']) => {
     const newWidget: Widget = {
-      id: Date.now().toString(),
+      id: `widget-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type,
-      title: `New ${type}`,
+      title: `${type.charAt(0).toUpperCase() + type.slice(1)} Widget`,
       config: {},
       size: 'medium'
     };
-    const updatedWidgets = [...widgets, newWidget];
-    setWidgets(updatedWidgets);
-    // Auto-save when adding widgets
-    localStorage.setItem('dashboard-widgets', JSON.stringify(updatedWidgets));
-    console.log('Auto-saved dashboard layout:', updatedWidgets);
+    
+    setWidgets(prev => {
+      const updated = [...prev, newWidget];
+      localStorage.setItem('snapgraph-dashboard-widgets', JSON.stringify(updated));
+      console.log('Added new widget:', newWidget);
+      return updated;
+    });
   };
 
   const removeWidget = (id: string) => {
-    const updatedWidgets = widgets.filter(w => w.id !== id);
-    setWidgets(updatedWidgets);
-    // Auto-save when removing widgets
-    localStorage.setItem('dashboard-widgets', JSON.stringify(updatedWidgets));
-    console.log('Auto-saved dashboard layout after removal:', updatedWidgets);
+    setWidgets(prev => {
+      const updated = prev.filter(w => w.id !== id);
+      localStorage.setItem('snapgraph-dashboard-widgets', JSON.stringify(updated));
+      
+      // Also remove the widget's chart configuration
+      localStorage.removeItem(`chart-config-${id}`);
+      console.log('Removed widget and its configuration:', id);
+      return updated;
+    });
   };
 
   const updateWidgetConfig = (widgetId: string, config: any) => {
-    const updatedWidgets = widgets.map(widget => 
-      widget.id === widgetId ? { ...widget, config } : widget
-    );
-    setWidgets(updatedWidgets);
-    // Auto-save when updating widget configurations
-    localStorage.setItem('dashboard-widgets', JSON.stringify(updatedWidgets));
-    console.log('Auto-saved widget config:', widgetId, config);
+    setWidgets(prev => {
+      const updated = prev.map(widget => 
+        widget.id === widgetId ? { ...widget, config } : widget
+      );
+      localStorage.setItem('snapgraph-dashboard-widgets', JSON.stringify(updated));
+      console.log('Updated widget config:', widgetId, config);
+      return updated;
+    });
   };
 
-  const saveLayout = () => {
-    localStorage.setItem('dashboard-widgets', JSON.stringify(widgets));
-    console.log('Manual save - Dashboard layout saved:', widgets);
-  };
-
-  const loadLayout = () => {
-    const saved = localStorage.getItem('dashboard-widgets');
-    if (saved) {
-      try {
-        const parsedWidgets = JSON.parse(saved);
-        setWidgets(parsedWidgets);
-        console.log('Loaded dashboard layout:', parsedWidgets);
-      } catch (error) {
-        console.error('Error loading dashboard layout:', error);
-      }
-    }
+  const updateWidgetTitle = (widgetId: string, title: string) => {
+    setWidgets(prev => {
+      const updated = prev.map(widget => 
+        widget.id === widgetId ? { ...widget, title } : widget
+      );
+      localStorage.setItem('snapgraph-dashboard-widgets', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const exportDashboard = () => {
@@ -105,33 +126,41 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, columns }) => {
       metadata: {
         totalRows,
         columnsCount: columns.length,
-        exportDate: new Date().toISOString()
+        exportDate: new Date().toISOString(),
+        version: '1.0'
       }
     };
     
-    const dataStr = JSON.stringify(dashboardData, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `dashboard-export-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    console.log('Dashboard exported successfully');
+    try {
+      const dataStr = JSON.stringify(dashboardData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `snapgraph-dashboard-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      console.log('Dashboard exported successfully');
+    } catch (error) {
+      console.error('Error exporting dashboard:', error);
+    }
   };
 
-  React.useEffect(() => {
-    loadLayout();
-  }, []);
-
-  // Auto-save when data changes
-  React.useEffect(() => {
-    if (widgets.length > 0) {
-      localStorage.setItem('dashboard-widgets', JSON.stringify(widgets));
+  const clearAllData = () => {
+    if (window.confirm('Are you sure you want to clear all dashboard data? This action cannot be undone.')) {
+      // Clear all widget configurations
+      widgets.forEach(widget => {
+        localStorage.removeItem(`chart-config-${widget.id}`);
+      });
+      
+      // Clear dashboard widgets
+      localStorage.removeItem('snapgraph-dashboard-widgets');
+      setWidgets([]);
+      console.log('Cleared all dashboard data');
     }
-  }, [data, columns]);
+  };
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${
@@ -152,15 +181,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, columns }) => {
             <Button
               variant="outline"
               size="sm"
-              onClick={saveLayout}
-              className={`flex items-center space-x-2 ${
+              onClick={clearAllData}
+              className={`flex items-center space-x-2 text-red-600 hover:text-red-700 ${
                 isDarkMode 
-                  ? 'border-gray-600 bg-gray-800 text-gray-200 hover:bg-gray-700' 
-                  : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                  ? 'border-red-600 bg-gray-800 hover:bg-red-900/20' 
+                  : 'border-red-300 bg-white hover:bg-red-50'
               }`}
             >
-              <Save className="h-4 w-4" />
-              <span>Save</span>
+              <Trash2 className="h-4 w-4" />
+              <span>Clear All</span>
             </Button>
             <Button
               variant={editMode ? "default" : "outline"}
@@ -238,6 +267,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, columns }) => {
               <ChartBuilder 
                 data={data} 
                 columns={columns}
+                chartId="quick-chart"
                 onConfigChange={(config) => updateWidgetConfig('quick-chart', config)}
               />
             </CardContent>
@@ -384,7 +414,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, columns }) => {
                 <CardHeader className={`border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                   <div className="flex justify-between items-center">
                     <CardTitle className={`text-xl ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {widget.title}
+                      {editMode ? (
+                        <input
+                          type="text"
+                          value={widget.title}
+                          onChange={(e) => updateWidgetTitle(widget.id, e.target.value)}
+                          className={`bg-transparent border-none outline-none focus:border-b-2 focus:border-blue-500 ${
+                            isDarkMode ? 'text-white' : 'text-gray-900'
+                          }`}
+                        />
+                      ) : (
+                        widget.title
+                      )}
                     </CardTitle>
                     {editMode && (
                       <Button
@@ -405,6 +446,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, columns }) => {
                     <ChartBuilder 
                       data={data} 
                       columns={columns}
+                      chartId={widget.id}
                       onConfigChange={(config) => updateWidgetConfig(widget.id, config)}
                     />
                   )}
@@ -417,7 +459,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, columns }) => {
                         {totalRows.toLocaleString()}
                       </div>
                       <div className={`text-lg ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        Custom KPI
+                        Total Records
                       </div>
                     </div>
                   )}

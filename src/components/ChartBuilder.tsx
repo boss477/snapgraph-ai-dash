@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -12,11 +12,12 @@ interface ChartBuilderProps {
   data: any[];
   columns: any[];
   onConfigChange?: (config: any) => void;
+  chartId?: string;
 }
 
 const COLORS = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#6366F1', '#EC4899', '#14B8A6'];
 
-export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns, onConfigChange }) => {
+export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns, onConfigChange, chartId = 'default' }) => {
   const [chartType, setChartType] = useState<'bar' | 'line' | 'pie' | 'scatter'>('bar');
   const [xAxis, setXAxis] = useState<string>('');
   const [yAxis, setYAxis] = useState<string>('');
@@ -28,18 +29,44 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns, onCon
   const categoricalColumns = columns.filter(col => col.type === 'text' || col.type === 'date');
   const allColumns = columns;
 
-  // Auto-save configuration when chart settings change
-  React.useEffect(() => {
-    if (onConfigChange) {
-      onConfigChange({
-        chartType,
-        xAxis,
-        yAxis,
-        groupBy,
-        zoomLevel
-      });
+  // Load saved configuration on mount
+  useEffect(() => {
+    const savedConfig = localStorage.getItem(`chart-config-${chartId}`);
+    if (savedConfig) {
+      try {
+        const config = JSON.parse(savedConfig);
+        setChartType(config.chartType || 'bar');
+        setXAxis(config.xAxis || '');
+        setYAxis(config.yAxis || '');
+        setGroupBy(config.groupBy || 'none');
+        setZoomLevel(config.zoomLevel || 1);
+        console.log('Loaded chart configuration:', config);
+      } catch (error) {
+        console.error('Error loading chart configuration:', error);
+      }
     }
-  }, [chartType, xAxis, yAxis, groupBy, zoomLevel, onConfigChange]);
+  }, [chartId]);
+
+  // Auto-save configuration when chart settings change
+  useEffect(() => {
+    const config = {
+      chartType,
+      xAxis,
+      yAxis,
+      groupBy,
+      zoomLevel,
+      timestamp: new Date().toISOString()
+    };
+
+    // Save to localStorage
+    localStorage.setItem(`chart-config-${chartId}`, JSON.stringify(config));
+    console.log('Auto-saved chart configuration:', chartId, config);
+
+    // Notify parent component
+    if (onConfigChange) {
+      onConfigChange(config);
+    }
+  }, [chartType, xAxis, yAxis, groupBy, zoomLevel, onConfigChange, chartId]);
 
   const chartData = useMemo(() => {
     if (!xAxis || (chartType !== 'pie' && !yAxis)) return [];
@@ -103,15 +130,20 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns, onCon
   }, [data, xAxis, yAxis, groupBy, chartType]);
 
   const handleZoomIn = () => {
-    setZoomLevel(prev => Math.min(prev + 0.2, 3));
+    const newZoom = Math.min(zoomLevel + 0.25, 3);
+    setZoomLevel(newZoom);
+    console.log('Zoom in to:', newZoom);
   };
 
   const handleZoomOut = () => {
-    setZoomLevel(prev => Math.max(prev - 0.2, 0.5));
+    const newZoom = Math.max(zoomLevel - 0.25, 0.5);
+    setZoomLevel(newZoom);
+    console.log('Zoom out to:', newZoom);
   };
 
   const resetZoom = () => {
     setZoomLevel(1);
+    console.log('Reset zoom to 1');
   };
 
   const exportChart = () => {
@@ -122,7 +154,8 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns, onCon
       groupBy,
       zoomLevel,
       data: chartData,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      chartId
     };
     
     const dataStr = JSON.stringify(chartConfig, null, 2);
@@ -130,12 +163,12 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns, onCon
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `chart-config-${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `chart-config-${chartId}-${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    console.log('Chart configuration exported');
+    console.log('Chart configuration exported successfully');
   };
 
   const resetChart = () => {
@@ -144,6 +177,9 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns, onCon
     setYAxis('');
     setGroupBy('none');
     setZoomLevel(1);
+    // Clear saved configuration
+    localStorage.removeItem(`chart-config-${chartId}`);
+    console.log('Chart reset and localStorage cleared');
   };
 
   const renderChart = () => {
@@ -168,8 +204,15 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns, onCon
       axis: { stroke: isDarkMode ? '#6b7280' : '#9ca3af' }
     };
 
-    const chartHeight = 300 * zoomLevel;
-    const chartWidth = `${100 * zoomLevel}%`;
+    // Calculate responsive dimensions with zoom
+    const baseHeight = 300;
+    const chartHeight = baseHeight * zoomLevel;
+    const containerStyle = {
+      width: '100%',
+      height: `${chartHeight}px`,
+      overflow: 'auto',
+      transition: 'all 0.3s ease'
+    };
 
     const commonProps = {
       data: chartData,
@@ -179,7 +222,7 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns, onCon
     switch (chartType) {
       case 'bar':
         return (
-          <div style={{ width: chartWidth, height: chartHeight, overflow: 'auto' }}>
+          <div style={containerStyle}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart {...commonProps}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid.stroke} />
@@ -217,7 +260,7 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns, onCon
 
       case 'line':
         return (
-          <div style={{ width: chartWidth, height: chartHeight, overflow: 'auto' }}>
+          <div style={containerStyle}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart {...commonProps}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.grid.stroke} />
@@ -248,7 +291,7 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns, onCon
 
       case 'pie':
         return (
-          <div style={{ width: chartWidth, height: chartHeight, overflow: 'auto' }}>
+          <div style={containerStyle}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -257,7 +300,7 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns, onCon
                   cy="50%"
                   labelLine={false}
                   label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80 * zoomLevel}
+                  outerRadius={Math.min(80 * zoomLevel, 150)}
                   fill="#8884d8"
                   dataKey="value"
                 >
@@ -281,7 +324,7 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns, onCon
 
       case 'scatter':
         return (
-          <div style={{ width: chartWidth, height: chartHeight, overflow: 'auto' }}>
+          <div style={containerStyle}>
             <ResponsiveContainer width="100%" height="100%">
               <ScatterChart {...commonProps}>
                 <CartesianGrid stroke={chartTheme.grid.stroke} />
@@ -331,25 +374,54 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns, onCon
           Chart Builder
         </h3>
         <div className="flex items-center space-x-2">
-          <div className="flex items-center space-x-1 border border-gray-300 rounded-lg p-1">
-            <Button variant="ghost" size="sm" onClick={handleZoomOut} disabled={zoomLevel <= 0.5}>
+          <div className={`flex items-center space-x-1 border rounded-lg p-1 ${
+            isDarkMode ? 'border-gray-600 bg-gray-800' : 'border-gray-300 bg-white'
+          }`}>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleZoomOut} 
+              disabled={zoomLevel <= 0.5}
+              className={isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}
+            >
               <ZoomOut className="h-4 w-4" />
             </Button>
-            <span className={`px-2 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+            <span className={`px-2 text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
               {Math.round(zoomLevel * 100)}%
             </span>
-            <Button variant="ghost" size="sm" onClick={handleZoomIn} disabled={zoomLevel >= 3}>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleZoomIn} 
+              disabled={zoomLevel >= 3}
+              className={isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}
+            >
               <ZoomIn className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={resetZoom}>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={resetZoom}
+              className={isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}
+            >
               Reset
             </Button>
           </div>
-          <Button variant="outline" size="sm" onClick={resetChart}>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={resetChart}
+            className={isDarkMode ? 'border-gray-600 bg-gray-800 text-gray-200 hover:bg-gray-700' : ''}
+          >
             <RefreshCw className="h-4 w-4 mr-2" />
             Reset
           </Button>
-          <Button variant="outline" size="sm" onClick={exportChart}>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={exportChart}
+            className={isDarkMode ? 'border-gray-600 bg-gray-800 text-gray-200 hover:bg-gray-700' : ''}
+          >
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
