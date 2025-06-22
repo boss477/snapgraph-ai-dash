@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -61,13 +60,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, columns }) => {
     }
   }, []);
 
-  // Auto-save widgets when they change
-  useEffect(() => {
-    if (widgets.length > 0) {
-      localStorage.setItem('snapgraph-dashboard-widgets', JSON.stringify(widgets));
-      console.log('Auto-saved dashboard widgets:', widgets);
+  // Save widgets to localStorage whenever widgets change
+  const saveWidgets = (newWidgets: Widget[]) => {
+    try {
+      localStorage.setItem('snapgraph-dashboard-widgets', JSON.stringify(newWidgets));
+      console.log('Saved dashboard widgets:', newWidgets);
+    } catch (error) {
+      console.error('Error saving dashboard widgets:', error);
     }
-  }, [widgets]);
+  };
 
   const addWidget = (type: Widget['type']) => {
     const newWidget: Widget = {
@@ -78,45 +79,37 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, columns }) => {
       size: 'medium'
     };
     
-    setWidgets(prev => {
-      const updated = [...prev, newWidget];
-      localStorage.setItem('snapgraph-dashboard-widgets', JSON.stringify(updated));
-      console.log('Added new widget:', newWidget);
-      return updated;
-    });
+    const updatedWidgets = [...widgets, newWidget];
+    setWidgets(updatedWidgets);
+    saveWidgets(updatedWidgets);
+    console.log('Added new widget:', newWidget);
   };
 
   const removeWidget = (id: string) => {
-    setWidgets(prev => {
-      const updated = prev.filter(w => w.id !== id);
-      localStorage.setItem('snapgraph-dashboard-widgets', JSON.stringify(updated));
-      
-      // Also remove the widget's chart configuration
-      localStorage.removeItem(`chart-config-${id}`);
-      console.log('Removed widget and its configuration:', id);
-      return updated;
-    });
+    const updatedWidgets = widgets.filter(w => w.id !== id);
+    setWidgets(updatedWidgets);
+    saveWidgets(updatedWidgets);
+    
+    // Also remove the widget's chart configuration
+    localStorage.removeItem(`chart-config-${id}`);
+    console.log('Removed widget and its configuration:', id);
   };
 
   const updateWidgetConfig = (widgetId: string, config: any) => {
-    setWidgets(prev => {
-      const updated = prev.map(widget => 
-        widget.id === widgetId ? { ...widget, config } : widget
-      );
-      localStorage.setItem('snapgraph-dashboard-widgets', JSON.stringify(updated));
-      console.log('Updated widget config:', widgetId, config);
-      return updated;
-    });
+    const updatedWidgets = widgets.map(widget => 
+      widget.id === widgetId ? { ...widget, config } : widget
+    );
+    setWidgets(updatedWidgets);
+    saveWidgets(updatedWidgets);
+    console.log('Updated widget config:', widgetId, config);
   };
 
   const updateWidgetTitle = (widgetId: string, title: string) => {
-    setWidgets(prev => {
-      const updated = prev.map(widget => 
-        widget.id === widgetId ? { ...widget, title } : widget
-      );
-      localStorage.setItem('snapgraph-dashboard-widgets', JSON.stringify(updated));
-      return updated;
-    });
+    const updatedWidgets = widgets.map(widget => 
+      widget.id === widgetId ? { ...widget, title } : widget
+    );
+    setWidgets(updatedWidgets);
+    saveWidgets(updatedWidgets);
   };
 
   const exportDashboard = () => {

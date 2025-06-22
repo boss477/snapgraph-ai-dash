@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -23,6 +22,7 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns, onCon
   const [yAxis, setYAxis] = useState<string>('');
   const [groupBy, setGroupBy] = useState<string>('none');
   const [zoomLevel, setZoomLevel] = useState<number>(1);
+  const [configLoaded, setConfigLoaded] = useState(false);
   const { isDarkMode } = useTheme();
 
   const numericColumns = columns.filter(col => col.type === 'number');
@@ -40,15 +40,18 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns, onCon
         setYAxis(config.yAxis || '');
         setGroupBy(config.groupBy || 'none');
         setZoomLevel(config.zoomLevel || 1);
-        console.log('Loaded chart configuration:', config);
+        console.log('Loaded chart configuration for', chartId, ':', config);
       } catch (error) {
         console.error('Error loading chart configuration:', error);
       }
     }
+    setConfigLoaded(true);
   }, [chartId]);
 
-  // Auto-save configuration when chart settings change
+  // Save configuration whenever any setting changes (only after initial load)
   useEffect(() => {
+    if (!configLoaded) return; // Don't save during initial load
+    
     const config = {
       chartType,
       xAxis,
@@ -60,13 +63,13 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns, onCon
 
     // Save to localStorage
     localStorage.setItem(`chart-config-${chartId}`, JSON.stringify(config));
-    console.log('Auto-saved chart configuration:', chartId, config);
+    console.log('Auto-saved chart configuration for', chartId, ':', config);
 
     // Notify parent component
     if (onConfigChange) {
       onConfigChange(config);
     }
-  }, [chartType, xAxis, yAxis, groupBy, zoomLevel, onConfigChange, chartId]);
+  }, [chartType, xAxis, yAxis, groupBy, zoomLevel, onConfigChange, chartId, configLoaded]);
 
   const chartData = useMemo(() => {
     if (!xAxis || (chartType !== 'pie' && !yAxis)) return [];
@@ -158,17 +161,21 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns, onCon
       chartId
     };
     
-    const dataStr = JSON.stringify(chartConfig, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `chart-config-${chartId}-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    console.log('Chart configuration exported successfully');
+    try {
+      const dataStr = JSON.stringify(chartConfig, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `chart-config-${chartId}-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      console.log('Chart configuration exported successfully');
+    } catch (error) {
+      console.error('Error exporting chart:', error);
+    }
   };
 
   const resetChart = () => {
@@ -179,7 +186,7 @@ export const ChartBuilder: React.FC<ChartBuilderProps> = ({ data, columns, onCon
     setZoomLevel(1);
     // Clear saved configuration
     localStorage.removeItem(`chart-config-${chartId}`);
-    console.log('Chart reset and localStorage cleared');
+    console.log('Chart reset and localStorage cleared for:', chartId);
   };
 
   const renderChart = () => {
