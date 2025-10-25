@@ -9,9 +9,10 @@ import { toast } from 'sonner';
 
 interface FileUploadProps {
   onDataUpload: (data: any[], columns: any[], fileName: string) => void;
+  allowMultiple?: boolean;
 }
 
-export const FileUpload: React.FC<FileUploadProps> = ({ onDataUpload }) => {
+export const FileUpload: React.FC<FileUploadProps> = ({ onDataUpload, allowMultiple = false }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
@@ -139,12 +140,19 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onDataUpload }) => {
   }, [onDataUpload]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (file) {
-      console.log('File dropped:', file.name, file.type, file.size);
-      processFile(file);
+    if (allowMultiple) {
+      acceptedFiles.forEach(file => {
+        console.log('File dropped:', file.name, file.type, file.size);
+        processFile(file);
+      });
+    } else {
+      const file = acceptedFiles[0];
+      if (file) {
+        console.log('File dropped:', file.name, file.type, file.size);
+        processFile(file);
+      }
     }
-  }, [processFile]);
+  }, [processFile, allowMultiple]);
 
   const { getRootProps, getInputProps, isDragActive, fileRejections } = useDropzone({
     onDrop,
@@ -154,7 +162,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onDataUpload }) => {
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
       'text/plain': ['.txt']
     },
-    multiple: false,
+    multiple: allowMultiple,
     maxSize: 50 * 1024 * 1024 // 50MB
   });
 
@@ -210,7 +218,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onDataUpload }) => {
           </h3>
           
           <p className="text-gray-600 mb-4">
-            Drag & drop your CSV file, or click to browse
+            Drag & drop your CSV {allowMultiple ? 'files' : 'file'}, or click to browse
           </p>
           
           <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">

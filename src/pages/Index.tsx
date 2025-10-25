@@ -12,24 +12,42 @@ import { DataTable } from '@/components/DataTable';
 import { ChartBuilder } from '@/components/ChartBuilder';
 import { Dashboard } from '@/components/Dashboard';
 import { AIChat } from '@/components/AIChat';
+import { DatasetSelector } from '@/components/DatasetSelector';
+import { Dataset } from '@/types/dataset';
 
 const Index = () => {
-  const [data, setData] = useState([]);
-  const [columns, setColumns] = useState([]);
-  const [fileName, setFileName] = useState('');
+  const [datasets, setDatasets] = useState<Dataset[]>([]);
+  const [selectedDatasetId, setSelectedDatasetId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('upload');
   const { isDarkMode } = useTheme();
 
-  const handleDataUpload = (parsedData, detectedColumns, name) => {
+  const handleDataUpload = (parsedData: any[], detectedColumns: any[], name: string) => {
     console.log('Data uploaded:', parsedData.length, 'rows');
-    setData(parsedData);
-    setColumns(detectedColumns);
-    setFileName(name);
+    
+    const newDataset: Dataset = {
+      id: Date.now().toString(),
+      name,
+      data: parsedData,
+      columns: detectedColumns,
+      uploadedAt: new Date()
+    };
+    
+    setDatasets(prev => [...prev, newDataset]);
+    setSelectedDatasetId(newDataset.id);
     setActiveTab('explore');
     toast.success(`Successfully loaded ${parsedData.length} rows from ${name}`);
   };
 
-  const hasData = data.length > 0;
+  const handleDeleteDataset = (id: string) => {
+    setDatasets(prev => prev.filter(d => d.id !== id));
+    if (selectedDatasetId === id) {
+      setSelectedDatasetId(datasets.length > 1 ? datasets[0].id : null);
+    }
+    toast.success('Dataset removed');
+  };
+
+  const selectedDataset = datasets.find(d => d.id === selectedDatasetId);
+  const hasData = datasets.length > 0;
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${
@@ -107,7 +125,19 @@ const Index = () => {
                 create interactive dashboards, and generate business insights in minutes.
               </p>
             </div>
-            <FileUpload onDataUpload={handleDataUpload} />
+            
+            {hasData && (
+              <DatasetSelector
+                datasets={datasets}
+                selectedDatasetId={selectedDatasetId}
+                onSelectDataset={setSelectedDatasetId}
+                onDeleteDataset={handleDeleteDataset}
+                onAddNew={() => {}}
+                isDarkMode={isDarkMode}
+              />
+            )}
+            
+            <FileUpload onDataUpload={handleDataUpload} allowMultiple={true} />
             
             {/* Feature Highlights */}
             <div className="grid md:grid-cols-3 gap-6 mt-12">
@@ -163,25 +193,53 @@ const Index = () => {
 
           <TabsContent value="explore">
             <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Data Explorer
-                  </h2>
-                  <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
-                    {fileName && `${fileName} • `}{data.length} rows • {columns.length} columns
-                  </p>
-                </div>
-              </div>
-              <div className="grid lg:grid-cols-2 gap-6">
-                <DataTable data={data} columns={columns} />
-                <ChartBuilder data={data} columns={columns} />
-              </div>
+              {selectedDataset && (
+                <>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                        Data Explorer
+                      </h2>
+                      <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
+                        {selectedDataset.name} • {selectedDataset.data.length} rows • {selectedDataset.columns.length} columns
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <DatasetSelector
+                    datasets={datasets}
+                    selectedDatasetId={selectedDatasetId}
+                    onSelectDataset={setSelectedDatasetId}
+                    onDeleteDataset={handleDeleteDataset}
+                    onAddNew={() => setActiveTab('upload')}
+                    isDarkMode={isDarkMode}
+                  />
+                  
+                  <div className="grid lg:grid-cols-2 gap-6">
+                    <DataTable data={selectedDataset.data} columns={selectedDataset.columns} />
+                    <ChartBuilder data={selectedDataset.data} columns={selectedDataset.columns} />
+                  </div>
+                </>
+              )}
             </div>
           </TabsContent>
 
           <TabsContent value="dashboard">
-            <Dashboard data={data} columns={columns} />
+            {selectedDataset && (
+              <>
+                <DatasetSelector
+                  datasets={datasets}
+                  selectedDatasetId={selectedDatasetId}
+                  onSelectDataset={setSelectedDatasetId}
+                  onDeleteDataset={handleDeleteDataset}
+                  onAddNew={() => setActiveTab('upload')}
+                  isDarkMode={isDarkMode}
+                />
+                <div className="mt-6">
+                  <Dashboard data={selectedDataset.data} columns={selectedDataset.columns} />
+                </div>
+              </>
+            )}
           </TabsContent>
 
           <TabsContent value="ai-chat">
@@ -194,7 +252,20 @@ const Index = () => {
                   Ask questions about your data in natural language and get instant insights.
                 </p>
               </div>
-              <AIChat data={data} columns={columns} />
+              
+              {selectedDataset && (
+                <>
+                  <DatasetSelector
+                    datasets={datasets}
+                    selectedDatasetId={selectedDatasetId}
+                    onSelectDataset={setSelectedDatasetId}
+                    onDeleteDataset={handleDeleteDataset}
+                    onAddNew={() => setActiveTab('upload')}
+                    isDarkMode={isDarkMode}
+                  />
+                  <AIChat data={selectedDataset.data} columns={selectedDataset.columns} />
+                </>
+              )}
             </div>
           </TabsContent>
         </Tabs>
