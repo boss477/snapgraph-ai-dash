@@ -135,11 +135,10 @@ export const DataTable: React.FC<DataTableProps> = ({ data, columns }) => {
   return (
     <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-lg">
       <CardHeader>
+        <CardTitle className="text-center mb-4">
+          Data Preview
+        </CardTitle>
         <div className="flex justify-between items-center">
-          <CardTitle className="flex items-center space-x-2">
-            <span>Data Preview</span>
-            <Badge variant="secondary">{filteredAndSortedData.length} rows</Badge>
-          </CardTitle>
           <div className="flex items-center space-x-2">
             <div className="relative">
               <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -150,6 +149,9 @@ export const DataTable: React.FC<DataTableProps> = ({ data, columns }) => {
                 className="pl-10 w-64"
               />
             </div>
+            <Badge variant="secondary">{filteredAndSortedData.length} rows</Badge>
+          </div>
+          <div className="flex items-center space-x-2">
             <Button variant="outline" size="sm" onClick={addToDashboard}>
               <Plus className="h-4 w-4 mr-2" />
               Add to Dashboard
