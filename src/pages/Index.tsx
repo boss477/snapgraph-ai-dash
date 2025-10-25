@@ -10,7 +10,6 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { FileUpload } from '@/components/FileUpload';
 import { DataTable } from '@/components/DataTable';
 import { ChartBuilder } from '@/components/ChartBuilder';
-import { PivotTable } from '@/components/PivotTable';
 import { Dashboard } from '@/components/Dashboard';
 import { AIChat } from '@/components/AIChat';
 
@@ -77,7 +76,7 @@ const Index = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className={`grid w-full grid-cols-5 backdrop-blur-sm transition-colors duration-300 ${
+          <TabsList className={`grid w-full grid-cols-4 backdrop-blur-sm transition-colors duration-300 ${
             isDarkMode ? 'bg-gray-800/70' : 'bg-white/70'
           }`}>
             <TabsTrigger value="upload" className="flex items-center space-x-2">
@@ -87,10 +86,6 @@ const Index = () => {
             <TabsTrigger value="explore" disabled={!hasData} className="flex items-center space-x-2">
               <BarChart3 className="h-4 w-4" />
               <span>Explore</span>
-            </TabsTrigger>
-            <TabsTrigger value="pivot" disabled={!hasData} className="flex items-center space-x-2">
-              <Plus className="h-4 w-4" />
-              <span>Pivot</span>
             </TabsTrigger>
             <TabsTrigger value="dashboard" disabled={!hasData} className="flex items-center space-x-2">
               <Zap className="h-4 w-4" />
@@ -143,7 +138,7 @@ const Index = () => {
                 </CardHeader>
                 <CardContent>
                   <p className={isDarkMode ? 'text-gray-300' : 'text-gray-600'}>
-                    Create interactive charts and pivot tables with simple drag & drop.
+                    Create interactive charts with simple drag & drop.
                   </p>
                 </CardContent>
               </Card>
@@ -182,20 +177,6 @@ const Index = () => {
                 <DataTable data={data} columns={columns} />
                 <ChartBuilder data={data} columns={columns} />
               </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="pivot">
-            <div className="space-y-6">
-              <div>
-                <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                  Pivot Table Builder
-                </h2>
-                <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
-                  Drag and drop fields to create dynamic pivot tables and cross-tabulations.
-                </p>
-              </div>
-              <PivotTable data={data} columns={columns} />
             </div>
           </TabsContent>
 

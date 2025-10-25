@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Settings, Download, Layout, BarChart3, PieChart, TrendingUp, Hash, Save, Trash2 } from 'lucide-react';
 import { ChartBuilder } from '@/components/ChartBuilder';
-import { PivotTable } from '@/components/PivotTable';
 import { Badge } from '@/components/ui/badge';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -14,7 +13,7 @@ interface DashboardProps {
 
 interface Widget {
   id: string;
-  type: 'chart' | 'kpi' | 'pivot';
+  type: 'chart' | 'kpi';
   title: string;
   config: any;
   size: 'small' | 'medium' | 'large';
@@ -379,18 +378,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, columns }) => {
                     <Hash className="h-5 w-5" />
                     <span>KPI</span>
                   </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => addWidget('pivot')}
-                    className={`flex items-center space-x-3 px-6 py-3 text-lg ${
-                      isDarkMode 
-                        ? 'border-gray-600 bg-gray-800 text-gray-200 hover:bg-gray-700' 
-                        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    <Layout className="h-5 w-5" />
-                    <span>Pivot Table</span>
-                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -442,9 +429,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, columns }) => {
                       chartId={widget.id}
                       onConfigChange={(config) => updateWidgetConfig(widget.id, config)}
                     />
-                  )}
-                  {widget.type === 'pivot' && (
-                    <PivotTable data={data} columns={columns} />
                   )}
                   {widget.type === 'kpi' && (
                     <div className="text-center p-8">
